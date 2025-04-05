@@ -18,10 +18,11 @@ motor
 # Others
 psutil
 js2py
-cfscrape
+# cfscrape removed due to compatibility issue with urllib3
 lk21
 lxml
 httpx
+urllib3==1.26.15  # Downgraded for compatibility if cfscrape is used
 
 # Google Drive
 google-api-core
