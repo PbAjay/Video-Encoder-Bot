@@ -1,31 +1,26 @@
-# Use official Ubuntu as base image
-FROM ubuntu:20.04
+FROM python:3.10-slim
 
-# Set timezone and non-interactive mode
-ENV DEBIAN_FRONTEND=noninteractive
-ENV TZ=Asia/Kolkata
-
-# Create working directory
-RUN mkdir /app && chmod 777 /app
 WORKDIR /app
 
-# Copy all project files
+# Install system dependencies
+RUN apt update && apt install -y ffmpeg git mediainfo gcc
+
+# Install pip packages
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy the bot code
 COPY . .
 
-# Install necessary packages
-RUN apt update && apt install -y --no-install-recommends \
-    git wget aria2 curl busybox python3 python3-pip \
-    p7zip-full p7zip-rar unzip mkvtoolnix ffmpeg \
-    && apt clean && rm -rf /var/lib/apt/lists/*
+# Git identity fix (optional but recommended if you have git pull or clone)
+RUN git config --global user.email "pbajay475@gmail.com" && \
+    git config --global user.name "PbAjay"
 
-# Install Python packages
-RUN pip3 install --no-cache-dir -r requirements.txt
-
-# Set script permissions
-RUN chmod +x extract run.sh
-
-# Expose port 8000 (dummy server)
+# Expose port for Koyeb health checks
 EXPOSE 8000
 
-# Start both the bot and dummy server
-CMD bash -c "python3 -m http.server 8000 & bash run.sh"
+# Health check endpoint (simple one using Python)
+RUN echo 'from http.server import BaseHTTPRequestHandler, HTTPServer\nclass Handler(BaseHTTPRequestHandler):\n def do_GET(self): self.send_response(200); self.end_headers(); self.wfile.write(b\"OK\")\nHTTPServer((\"0.0.0.0\", 8000), Handler).serve_forever()' > healthcheck.py
+
+# Start health check in background + bot
+CMD python3 healthcheck.py & python3 -m VideoEncoder
